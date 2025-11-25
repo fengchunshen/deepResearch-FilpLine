@@ -19,7 +19,8 @@ from app.apis.v1 import (
     endpoint_analysis,
     endpoint_deepsearch,
     endpoint_monitor,
-    endpoint_tianyancha
+    endpoint_tianyancha,
+    endpoint_markdown,
 )
 import logging
 
@@ -124,6 +125,12 @@ app.include_router(
     endpoint_tianyancha.router,
     prefix=f"{settings.API_V1_PREFIX}/tianyancha",
     tags=["天眼查"],
+)
+
+app.include_router(
+    endpoint_markdown.router,
+    prefix=f"{settings.API_V1_PREFIX}/markdown",
+    tags=["Markdown工具"],
 )
 
 

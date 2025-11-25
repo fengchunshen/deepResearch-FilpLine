@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     
     # DeepSearch 配置
     DEEPSEARCH_USE_ZH_QUERY_FOR_SEARCH: bool = False  # 是否优先使用中文查询作为真实搜索关键词
+
+    # PDF / 报告导出配置
+    PDF_OUTPUT_DIR: str = "outputs/pdfs"  # Markdown 转 PDF 的默认输出目录
+    PDF_FONT_PATH: Optional[str] = None  # 自定义中文字体文件路径（TTF/TTC）
+    PDF_FONT_NAME: str = "SimSun"  # 注册到 PDF 中的字体名称，需与 CSS 中一致
     
     model_config = {
         "env_file": ".env",
