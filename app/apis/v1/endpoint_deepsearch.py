@@ -73,7 +73,13 @@ async def run_deepsearch_stream(
     # 从请求头获取客户端信息
     client_ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
-    
+
+    # 记录关键请求参数，包含 use_zh_query_for_search，便于问题排查
+    logger.info(
+        f"DeepSearch流式请求参数: query={request_data.query!r}, "
+        f"use_zh_query_for_search={getattr(request_data, 'use_zh_query_for_search', None)}"
+    )
+
     # 创建监控连接，传递 Request 对象用于主动检测连接状态
     connection_id = await sse_monitor.create_connection(
         user_id=None,  # 如果有认证系统，从token中获取
