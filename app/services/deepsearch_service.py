@@ -53,6 +53,9 @@ class DeepSearchService:
             if request.reasoning_model is not None:
                 state["reasoning_model"] = request.reasoning_model
                 logger.info(f"设置 reasoning_model = {request.reasoning_model}")
+            if request.use_zh_query_for_search is not None:
+                state["use_zh_query_for_search"] = request.use_zh_query_for_search
+                logger.info(f"设置 use_zh_query_for_search = {request.use_zh_query_for_search}")
 
             logger.info(f"初始状态构建完成: {list(state.keys())}")
 
@@ -360,6 +363,8 @@ class DeepSearchService:
             state["max_research_loops"] = request.max_research_loops
         if request.reasoning_model is not None:
             state["reasoning_model"] = request.reasoning_model
+        if request.use_zh_query_for_search is not None:
+            state["use_zh_query_for_search"] = request.use_zh_query_for_search
         
         return state
     

@@ -85,6 +85,10 @@ class DeepSearchRequest(BaseModel):
     report_format: ReportFormat = Field(
         default=ReportFormat.FORMAL, description="报告格式"
     )
+    use_zh_query_for_search: Optional[bool] = Field(
+        default=None,
+        description="是否优先使用中文查询作为真实搜索关键词（优先级：请求参数 > 配置开关 > 默认行为）",
+    )
 
 
 class DeepSource(BaseModel):

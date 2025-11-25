@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     WEB_SCRAPE_MAX_PER_DOC_CHARS: int = 20000  # 单个网页内容的字符数上限
     WEB_SCRAPE_USER_AGENT: str = "Mozilla/5.0 (MegumiBot/1.0; +https://example.com/bot)"  # User-Agent
     
+    # DeepSearch 配置
+    DEEPSEARCH_USE_ZH_QUERY_FOR_SEARCH: bool = False  # 是否优先使用中文查询作为真实搜索关键词
+    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

@@ -14,6 +14,7 @@ from app.apis.v1 import (
     endpoint_drawing,
     endpoint_ocr,
     endpoint_fastgpt,
+    endpoint_gemini,
     endpoint_agent,
     endpoint_analysis,
     endpoint_deepsearch,
@@ -71,55 +72,58 @@ async def add_security_headers(request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
-# 注册 API 路由
 app.include_router(
     endpoint_drawing.router,
     prefix=f"{settings.API_V1_PREFIX}/drawing",
-    tags=["绘图"]
+    tags=["绘图"],
 )
 
 app.include_router(
     endpoint_ocr.router,
     prefix=f"{settings.API_V1_PREFIX}/ocr",
-    tags=["OCR"]
+    tags=["OCR"],
 )
 
 app.include_router(
     endpoint_fastgpt.router,
     prefix=f"{settings.API_V1_PREFIX}/fastgpt",
-    tags=["FastGPT"]
+    tags=["FastGPT"],
+)
+
+app.include_router(
+    endpoint_gemini.router,
+    prefix=f"{settings.API_V1_PREFIX}/gemini",
+    tags=["Gemini"],
 )
 
 app.include_router(
     endpoint_agent.router,
     prefix=f"{settings.API_V1_PREFIX}/agent",
-    tags=["智能体"]
+    tags=["智能体"],
 )
 
 app.include_router(
     endpoint_analysis.router,
     prefix=f"{settings.API_V1_PREFIX}/analysis",
-    tags=["AI分析"]
+    tags=["AI分析"],
 )
 
 app.include_router(
     endpoint_deepsearch.router,
     prefix=f"{settings.API_V1_PREFIX}/deepsearch",
-    tags=["DeepSearch"]
+    tags=["DeepSearch"],
 )
 
-# 注册监控路由
 app.include_router(
     endpoint_monitor.router,
     prefix=f"{settings.API_V1_PREFIX}/monitor",
-    tags=["系统监控"]
+    tags=["系统监控"],
 )
 
-# 注册天眼查路由
 app.include_router(
     endpoint_tianyancha.router,
     prefix=f"{settings.API_V1_PREFIX}/tianyancha",
-    tags=["天眼查"]
+    tags=["天眼查"],
 )
 
 

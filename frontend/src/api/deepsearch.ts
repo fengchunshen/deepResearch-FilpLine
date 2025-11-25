@@ -6,6 +6,7 @@ export interface DeepSearchRequest {
   max_research_loops?: number
   reasoning_model?: string
   report_format?: string
+  use_zh_query_for_search?: boolean
 }
 
 export interface DeepSearchResponse {

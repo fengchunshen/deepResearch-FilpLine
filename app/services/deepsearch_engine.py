@@ -356,6 +356,8 @@ class OverallState(TypedDict, total=False):
     summary_optimization: Dict[str, Any]
     verification_report: str
     final_confidence_score: float
+    # 控制查询语言策略
+    use_zh_query_for_search: bool
 
 
 class ReflectionState(TypedDict):
@@ -372,10 +374,11 @@ class Query(TypedDict):
     rationale: str
 
 
-class QueryGenerationState(TypedDict):
+class QueryGenerationState(TypedDict, total=False):
     search_query: List[str]  # 累积的查询（用于历史记录，存储中文查询用于前端展示）
     new_search_query: List[str]  # 本轮新生成的英文查询（用于实际搜索，不累加）
     new_search_query_zh: List[str]  # 本轮新生成的中文查询（用于前端展示，不累加）
+    use_zh_query_for_search: bool  # 是否优先使用中文查询进行真实搜索（从整体状态透传）
 
 
 class WebSearchState(TypedDict):
@@ -544,21 +547,54 @@ async def generate_query(state: OverallState, config: RunnableConfig) -> QueryGe
     for idx, (en_query, zh_query) in enumerate(zip(english_queries[:5], chinese_queries[:5]), 1):  # 只记录前5个
         jinfo(logger, "查询样本", 节点="生成查询", 序号=idx, 英文查询=en_query[:100], 中文查询=zh_query[:100])
     
-    # 返回三个字段：
+    # 返回字段：
     # - search_query: 累积的中文查询（用于前端展示和历史记录）
     # - new_search_query: 英文查询（用于实际搜索）
     # - new_search_query_zh: 中文查询（用于前端展示）
-    return {
+    # - use_zh_query_for_search: 从整体状态透传下来的查询语言策略
+    result_state: QueryGenerationState = {
         "search_query": chinese_queries,  # 累积中文查询用于前端展示
         "new_search_query": english_queries,  # 英文查询用于实际搜索
-        "new_search_query_zh": chinese_queries  # 中文查询用于前端展示
+        "new_search_query_zh": chinese_queries,  # 中文查询用于前端展示
     }
+
+    if "use_zh_query_for_search" in state:
+        result_state["use_zh_query_for_search"] = bool(state["use_zh_query_for_search"])
+
+    return result_state
 
 
 def continue_to_web_research(state: QueryGenerationState):
-    new_queries = state.get("new_search_query", [])
+    """
+    将生成的查询分发到网络研究节点。
+
+    行为由配置开关控制：
+    - 当 `settings.DEEPSEARCH_USE_ZH_QUERY_FOR_SEARCH` 为 True 时：优先使用中文查询 (`new_search_query_zh`) 进行真实搜索，
+      如果本轮未生成中文查询，则回退到英文查询 (`new_search_query`)；
+    - 当该开关为 False 时：保持原有行为，只使用英文查询 (`new_search_query`) 进行真实搜索。
+    """
+    # 以请求级参数为最高优先级，其次是配置开关，最后是默认行为（英文查询）
+    request_level_flag = state.get("use_zh_query_for_search")
+    if request_level_flag is not None:
+        use_zh_for_search = bool(request_level_flag)
+    else:
+        use_zh_for_search = settings.DEEPSEARCH_USE_ZH_QUERY_FOR_SEARCH
+
+    if use_zh_for_search:
+        # 优先使用中文查询作为实际搜索关键词，未生成时回退到英文查询
+        new_queries = state.get("new_search_query_zh") or state.get("new_search_query", [])
+    else:
+        # 保持原有行为：仅使用英文查询
+        new_queries = state.get("new_search_query", [])
+
     query_count = len(new_queries)
-    jinfo(logger, "分发到网络研究任务", 节点="继续到网络研究", 任务数量=query_count)
+    jinfo(
+        logger,
+        "分发到网络研究任务",
+        节点="继续到网络研究",
+        任务数量=query_count,
+        使用中文查询=bool(use_zh_for_search and state.get("new_search_query_zh")),
+    )
     return [
         Send("web_research", {"search_query": search_query, "id": int(idx)})
         for idx, search_query in enumerate(new_queries)
