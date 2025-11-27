@@ -89,6 +89,10 @@ class DeepSearchRequest(BaseModel):
         default=None,
         description="是否优先使用中文查询作为真实搜索关键词（优先级：请求参数 > 配置开关 > 默认行为）",
     )
+    generate_pdf: Optional[bool] = Field(
+        default=False,
+        description="是否在服务器端生成 PDF 报告并返回文件路径",
+    )
 
 
 class DeepSource(BaseModel):
@@ -107,6 +111,7 @@ class DeepSearchResponse(BaseModel):
     all_sources: List[DeepSource] = Field(default_factory=list, description="所有搜索到的网络资源列表")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="附加元数据，如循环次数等")
     message: Optional[str] = Field(default=None, description="附加消息")
+    pdf_path: Optional[str] = Field(default=None, description="生成的 PDF 报告文件绝对路径（如果有）")
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(), description="响应时间戳")
 
 

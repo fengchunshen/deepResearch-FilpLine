@@ -357,23 +357,14 @@ class ReportGenerator:
         numbers: List[int],
         citation_usage: Dict[str, int]
     ) -> str:
-        """根据引用序号生成角标 HTML."""
+        """根据引用序号生成简化的角标文本（不使用 HTML 标签）."""
         if not numbers:
             return ""
         
-        unique_numbers = sorted({str(number) for number in numbers}, key=int)
-        super_scripts = []
-        
-        for number in unique_numbers:
-            suffix = citation_usage.get(number, 0) + 1
-            citation_usage[number] = suffix
-            citation_id = f"cite-{number}-{suffix}"
-            reference_id = f"ref-{number}"
-            super_scripts.append(
-                f'<sup id="{citation_id}"><a href="#{reference_id}">[{number}]</a></sup>'
-            )
-        
-        return "".join(super_scripts)
+        # 去重并按数字排序
+        unique_numbers = sorted({int(n) for n in numbers})
+        # 直接返回如 [1]、[1][2] 这样的 Markdown 文本，避免 HTML 结构
+        return "".join(f"[{n}]" for n in unique_numbers)
     
     def _normalize_sources(
         self,
@@ -458,19 +449,8 @@ class ReportGenerator:
         
         if verified_facts:
             for idx, fact in enumerate(verified_facts[:5], 1):  # 只显示前5个
-                if sources and idx <= len(sources):
-                    citation_id = f"cite-fact-{idx}"
-                    reference_id = f"ref-{idx}"
-                    citation_html = (
-                        f'<sup id="{citation_id}">'
-                        f'<a href="#{reference_id}">[{idx}]</a>'
-                        "</sup>"
-                    )
-                    formatted += f"{idx}. {fact} {citation_html}\n"
-                else:
-                    # 传统的来源格式
-                    source_idx = idx
-                    formatted += f"{idx}. {fact} [来源{source_idx}]\n"
+                # 简化引用格式，统一使用 Markdown 编号形式，避免 HTML 标签
+                formatted += f"{idx}. {fact} [{idx}]\n"
         else:
             formatted += "（暂无已验证事实记录）\n"
         
@@ -524,23 +504,18 @@ class ReportGenerator:
         if not sources:
             return "（本次研究未引用外部文献）"
         
-        formatted = ""
+        formatted_lines: List[str] = []
         access_time = datetime.now().strftime("%Y年%m月%d日")
         
         for idx, source in enumerate(sources, 1):
             title = source.get("label", "未知来源")
             url = source.get("value", "#")
-            reference_id = f"ref-{idx}"
-            
-            formatted += (
-                f'<p id="{reference_id}">'
-                f"[{idx}] "
-                f'<a href="{url}" target="_blank" rel="noopener noreferrer">{title}</a>'
-                f"。访问时间：{access_time}"
-                "</p>\n"
+            # 使用纯 Markdown 有序列表，避免 HTML 标签，方便 PDF 渲染
+            formatted_lines.append(
+                f"{idx}. [{title}]({url})。访问时间：{access_time}"
             )
         
-        return formatted.strip()
+        return "\n".join(formatted_lines).strip()
 
     def format_content_with_citations(
         self,
@@ -574,18 +549,11 @@ class ReportGenerator:
                 formatted_paragraphs.append(paragraph)
                 continue
             
-            # 如果段落中已存在编号，则替换为 HTML 角标形式
+            # 如果段落中已存在编号，则替换为简化角标形式（不使用 HTML）
             def replace_existing(match: re.Match) -> str:
                 number = match.group(1)
-                suffix = citation_usage.get(number, 0) + 1
-                citation_usage[number] = suffix
-                citation_id = f"cite-{number}-{suffix}"
-                reference_id = f"ref-{number}"
-                return (
-                    f'<sup id="{citation_id}">'
-                    f'<a href="#{reference_id}">[{number}]</a>'
-                    "</sup>"
-                )
+                citation_usage[number] = citation_usage.get(number, 0) + 1
+                return f"[{number}]"
             
             replaced_paragraph = re.sub(r'\[(\d+)\]', replace_existing, paragraph)
             replaced_paragraph = self._link_unlinked_brackets(
