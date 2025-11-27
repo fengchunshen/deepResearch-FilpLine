@@ -69,13 +69,24 @@ async def chat_with_gemini(
         GeminiChatCompletionResponse: Gemini 非流式回答
     """
     try:
+        # 记录请求参数，便于排查问题（仅在服务端日志中可见）
+        logger.info(
+            "Gemini 非流式对话请求参数: %s",
+            request.model_dump(exclude_none=True),
+        )
         # 为当前会话注入固定身份 Prompt
         _inject_identity_system_prompt(request)
         return await gemini_chat_service.chat_completion(request)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Gemini 非流式对话失败: {e}", exc_info=True)
+        # 记录详细错误信息和请求入参，方便排查 500 错误
+        logger.error(
+            "Gemini 非流式对话失败: %s，请求参数: %s",
+            e,
+            request.model_dump(exclude_none=True),
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail=f"Gemini 非流式对话失败: {str(e)}")
 
 
@@ -98,6 +109,12 @@ async def chat_with_gemini_stream(
         StreamingResponse: 流式 SSE 响应
     """
 
+    # 记录请求参数，便于排查问题（仅在服务端日志中可见）
+    logger.info(
+        "Gemini 流式对话请求参数: %s",
+        request.model_dump(exclude_none=True),
+    )
+
     # 为当前会话注入固定身份 Prompt
     _inject_identity_system_prompt(request)
 
@@ -107,12 +124,24 @@ async def chat_with_gemini_stream(
             async for chunk in gemini_chat_service.chat_completion_stream(request):
                 yield chunk
         except Exception as e:
-            logger.error(f"Gemini 流式对话失败: {e}", exc_info=True)
+            # 记录详细错误信息和请求入参，方便排查 500 错误
+            logger.error(
+                "Gemini 流式对话失败: %s，请求参数: %s",
+                e,
+                request.model_dump(exclude_none=True),
+                exc_info=True,
+            )
             # 流式场景中无法再抛出 HTTPException，只在日志中记录
 
+    # 为了兼容 Nginx / 反向代理的流式转发行为，添加与 DeepSearch 相同的 SSE 相关响应头
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )
 
 

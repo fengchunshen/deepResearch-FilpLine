@@ -7,8 +7,9 @@ project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.apis.v1 import (
     endpoint_drawing,
@@ -132,6 +133,57 @@ app.include_router(
     prefix=f"{settings.API_V1_PREFIX}/markdown",
     tags=["Markdown工具"],
 )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """
+    全局 HTTPException 处理器.
+
+    Args:
+        request: 请求对象
+        exc: HTTP 异常
+
+    Returns:
+        JSONResponse: 标准化 HTTP 异常响应
+    """
+    logger.error(
+        "HTTPException: status=%s, detail=%s, path=%s, method=%s",
+        exc.status_code,
+        exc.detail,
+        request.url.path,
+        request.method,
+        exc_info=True if exc.status_code >= 500 else False,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    全局未处理异常处理器.
+
+    Args:
+        request: 请求对象
+        exc: 未处理异常
+
+    Returns:
+        JSONResponse: 统一的 500 异常响应
+    """
+    logger.error(
+        "未处理异常: %s, path=%s, method=%s",
+        exc,
+        request.url.path,
+        request.method,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "服务器内部错误，请联系管理员"},
+    )
 
 
 @app.get("/")

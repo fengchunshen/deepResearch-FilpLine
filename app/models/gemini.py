@@ -8,7 +8,14 @@ class ChatMessage(BaseModel):
     """聊天消息模型."""
 
     role: str = Field(..., description="消息角色，例如 system、user、assistant")
-    content: str = Field(..., description="消息内容文本")
+    content: Any = Field(
+        ...,
+        description=(
+            "消息内容，可以是纯文本字符串，"
+            "也可以是多模态内容数组（例如包含 text、image_url 等结构），"
+            "以兼容 OpenAI / Gemini ChatCompletions 的多模态入参格式"
+        ),
+    )
 
 
 class GeminiChatRequest(BaseModel):

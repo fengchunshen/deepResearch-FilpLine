@@ -67,8 +67,29 @@ class GeminiChatService:
                 response.raise_for_status()
                 data = response.json()
                 return GeminiChatCompletionResponse.model_validate(data)
-        except httpx.HTTPError as e:
-            logger.error(f"Gemini 非流式请求失败: {e}")
+        except httpx.HTTPStatusError as e:
+            # 记录下游 Gemini 返回的状态码和响应体，便于排查 4xx/5xx 问题
+            status_code = e.response.status_code if e.response is not None else None
+            response_text = e.response.text if e.response is not None else None
+            logger.error(
+                "Gemini 非流式请求失败(HTTPStatusError): %s，URL: %s，状态码: %s，响应体: %s，请求负载: %s",
+                e,
+                url,
+                status_code,
+                response_text,
+                payload,
+                exc_info=True,
+            )
+            raise
+        except httpx.RequestError as e:
+            # 记录网络层面的错误信息（连接失败、超时等）
+            logger.error(
+                "Gemini 非流式请求失败(RequestError): %s，请求 URL: %s，请求负载: %s",
+                e,
+                url,
+                payload,
+                exc_info=True,
+            )
             raise
 
     async def chat_completion_stream(
@@ -100,8 +121,27 @@ class GeminiChatService:
                         # 直接将 Gemini 的响应片段透传给前端客户端
                         if chunk:
                             yield chunk
-        except httpx.HTTPError as e:
-            logger.error(f"Gemini 流式请求失败: {e}")
+        except httpx.HTTPStatusError as e:
+            # 记录下游 Gemini 返回的状态码，便于排查 4xx/5xx 问题
+            status_code = e.response.status_code if e.response is not None else None
+            logger.error(
+                "Gemini 流式请求失败(HTTPStatusError): %s，URL: %s，状态码: %s，请求负载: %s",
+                e,
+                url,
+                status_code,
+                payload,
+                exc_info=True,
+            )
+            raise
+        except httpx.RequestError as e:
+            # 记录网络层面的错误信息（连接失败、超时等）
+            logger.error(
+                "Gemini 流式请求失败(RequestError): %s，请求 URL: %s，请求负载: %s",
+                e,
+                url,
+                payload,
+                exc_info=True,
+            )
             raise
 
 
