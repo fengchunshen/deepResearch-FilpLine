@@ -1,6 +1,16 @@
 """应用配置管理 - 环境变量和 API Keys."""
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from typing import Optional
+
+
+def get_project_root() -> Path:
+    """获取项目根目录（langchain-megumi）."""
+    # 从当前文件位置向上查找，找到包含 app 目录的项目根目录
+    current_file = Path(__file__).resolve()
+    # config.py 在 app/core/ 目录下，向上两级到项目根目录
+    project_root = current_file.parent.parent.parent
+    return project_root
 
 
 class Settings(BaseSettings):
@@ -80,7 +90,7 @@ class Settings(BaseSettings):
     PDF_FONT_NAME: str = "SimSun"  # 注册到 PDF 中的字体名称，需与 CSS 中一致
     
     model_config = {
-        "env_file": ".env",
+        "env_file": str(get_project_root() / ".env"),
         "env_file_encoding": "utf-8",
         "case_sensitive": True
     }

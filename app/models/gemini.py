@@ -89,3 +89,15 @@ class GeminiChatCompletionResponse(BaseModel):
     )
 
 
+class PolicyFormatRequest(BaseModel):
+    """政策文本格式化请求模型."""
+
+    content: str = Field(..., description="待格式化的政策原文文本")
+
+
+class PolicyFormatResponse(BaseModel):
+    """政策文本格式化响应模型."""
+
+    mind_map: str = Field(..., description="格式化后的 Markdown 思维导图内容")
+    summary: str = Field(..., description="45 字以内的中文概要")
+
