@@ -14,6 +14,10 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    pkg-config \
+    libcairo2-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
