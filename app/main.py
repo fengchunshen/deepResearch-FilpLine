@@ -22,6 +22,7 @@ from app.apis.v1 import (
     endpoint_monitor,
     endpoint_tianyancha,
     endpoint_markdown,
+    endpoint_h5,
 )
 import logging
 
@@ -132,6 +133,12 @@ app.include_router(
     endpoint_markdown.router,
     prefix=f"{settings.API_V1_PREFIX}/markdown",
     tags=["Markdown工具"],
+)
+
+app.include_router(
+    endpoint_h5.router,
+    prefix=f"{settings.API_V1_PREFIX}/h5",
+    tags=["H5移动端"],
 )
 
 
