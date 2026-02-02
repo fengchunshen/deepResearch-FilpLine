@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 增强 FastGPT 服务，新增流式对话和简单调用方法\n\n- 新增 chat_stream 流式对话方法，支持自定义 API URL/Key\n- 新增 call_fastgpt_simple 简单调用方法，支持重试和并发控制\n- 新增并发控制信号量管理\n- 新增 AI JSON 响应解析工具函数\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 新增 FastGPT 多场景配置和标签代理配置\n\n- 新增政策解读专用 API 配置\n- 新增政策导读助手 API 配置\n- 新增产业链节点分析 API 配置\n- 新增标签代理 API 配置\nEOF\n\\)\")",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 新增 H5 移动端 API 模块\n\n- 政策解读流式接口\n- 政策申报指南流式接口\n- 产业链节点分析流式接口\n- 企业简单查询接口\n- 天眼查接口（搜索、基本信息、专利、资质证书）\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push)"
+    ]
+  }
+}
