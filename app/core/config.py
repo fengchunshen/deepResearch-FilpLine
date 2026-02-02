@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # FastGPT 配置
     FASTGPT_API_URL: Optional[str] = None
     FASTGPT_API_KEY: Optional[str] = None
+    FASTGPT_POLICY_API_URL: Optional[str] = None  # 政策解读专用 API URL
+    FASTGPT_POLICY_API_KEY: Optional[str] = None  # 政策解读专用 API Key
+    FASTGPT_POLICY_GUIDE_API_URL: Optional[str] = None  # 政策导读助手 API URL
+    FASTGPT_POLICY_GUIDE_API_KEY: Optional[str] = None  # 政策导读助手 API Key
+    FASTGPT_NODE_ANALYZE_API_URL: Optional[str] = None  # 产业链节点分析 API URL
+    FASTGPT_NODE_ANALYZE_API_KEY: Optional[str] = None  # 产业链节点分析 API Key
     
     # 绘图服务配置（例如：DALL-E, Stable Diffusion）
     DRAWING_API_KEY: Optional[str] = None
@@ -56,6 +62,10 @@ class Settings(BaseSettings):
     
     # 天眼查 API 配置
     TIANYANCHA_API_TOKEN: Optional[str] = None
+
+    # 标签代理 API 配置
+    TAG_AGENT_API_URL: Optional[str] = None
+    TAG_AGENT_AUTHORIZATION: Optional[str] = None
     
     # Gemini API 配置
     GEMINI_API_URL: Optional[str] = None
