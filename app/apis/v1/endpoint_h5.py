@@ -1,5 +1,6 @@
 """H5移动端 API 端点."""
 from typing import Optional, List, Any
+from urllib.parse import unquote
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -419,6 +420,9 @@ async def tianyancha_search(
     """
     if not word or not word.strip():
         raise HTTPException(status_code=400, detail="搜索关键词不能为空")
+
+    # 解码 URL 编码的参数，防止双重编码问题
+    word = unquote(word)
 
     if not settings.TIANYANCHA_API_TOKEN:
         raise HTTPException(status_code=500, detail="天眼查 API Token 未配置")
