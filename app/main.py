@@ -21,7 +21,6 @@ from app.apis.v1 import (
     endpoint_deepsearch,
     endpoint_monitor,
     endpoint_tianyancha,
-    endpoint_markdown,
     endpoint_h5,
 )
 import logging
@@ -129,11 +128,6 @@ app.include_router(
     tags=["天眼查"],
 )
 
-app.include_router(
-    endpoint_markdown.router,
-    prefix=f"{settings.API_V1_PREFIX}/markdown",
-    tags=["Markdown工具"],
-)
 
 app.include_router(
     endpoint_h5.router,

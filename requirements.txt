@@ -25,9 +25,8 @@ certifi>=2023.11.17
 PyPDF2>=3.0.1
 PyMuPDF>=1.23.26  # 用于 PDF 转图片（OCR 需要）
 
-# Markdown / PDF 生成
+# Markdown 解析
 markdown>=3.5.0
-xhtml2pdf>=0.2.15
 
 # 网页抓取和解析
 beautifulsoup4>=4.12.0
