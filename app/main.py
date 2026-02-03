@@ -14,13 +14,11 @@ from app.core.config import settings
 from app.apis.v1 import (
     endpoint_drawing,
     endpoint_ocr,
-    endpoint_fastgpt,
     endpoint_gemini,
     endpoint_agent,
     endpoint_analysis,
     endpoint_deepsearch,
     endpoint_monitor,
-    endpoint_tianyancha,
     endpoint_h5,
 )
 import logging
@@ -87,12 +85,6 @@ app.include_router(
 )
 
 app.include_router(
-    endpoint_fastgpt.router,
-    prefix=f"{settings.API_V1_PREFIX}/fastgpt",
-    tags=["FastGPT"],
-)
-
-app.include_router(
     endpoint_gemini.router,
     prefix=f"{settings.API_V1_PREFIX}/gemini",
     tags=["Gemini"],
@@ -120,12 +112,6 @@ app.include_router(
     endpoint_monitor.router,
     prefix=f"{settings.API_V1_PREFIX}/monitor",
     tags=["系统监控"],
-)
-
-app.include_router(
-    endpoint_tianyancha.router,
-    prefix=f"{settings.API_V1_PREFIX}/tianyancha",
-    tags=["天眼查"],
 )
 
 
