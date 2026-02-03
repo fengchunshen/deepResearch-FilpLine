@@ -10,7 +10,6 @@ from langchain_core.runnables import RunnableConfig
 
 from app.services.deepsearch_engine import graph, reset_degradation_status, is_connection_cancelled
 from app.services.report_generator import report_generator
-from app.services.markdown_pdf_service import markdown_pdf_service
 from app.models.deepsearch import (
     DeepSearchRequest, 
     DeepSearchResponse, 
@@ -65,21 +64,9 @@ class DeepSearchService:
             logger.info("开始执行图流...")
             result_state = await graph.ainvoke(state, config=config)
             logger.info("图流执行完成")
-            
+
             response = self._build_response(request, result_state)
 
-            # 可选：生成 PDF 报告
-            if getattr(request, "generate_pdf", False) and response.markdown_report:
-                try:
-                    pdf_filename = f"deepsearch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                    pdf_path = await markdown_pdf_service.markdown_to_pdf(
-                        markdown_text=response.markdown_report,
-                        filename=pdf_filename,
-                    )
-                    response.pdf_path = pdf_path
-                except Exception as e:
-                    logger.error(f"生成 DeepSearch PDF 报告失败: {e}", exc_info=True)
-            
             logger.info(f"结果提取完成 - 答案长度: {len(response.answer)}, 被引用数据源数量: {len(response.sources)}, 所有搜索到的资源数量: {len(response.all_sources)}")
             
             return response
@@ -338,18 +325,6 @@ class DeepSearchService:
             logger.info(f"流式执行完成，使用累积状态构建响应（已处理 {chunk_count} 个chunk）")
             response = self._build_response(request, accumulated_state)
 
-            # 可选：为流式模式也生成 PDF 报告
-            if getattr(request, "generate_pdf", False) and response.markdown_report:
-                try:
-                    pdf_filename = f"deepsearch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                    pdf_path = await markdown_pdf_service.markdown_to_pdf(
-                        markdown_text=response.markdown_report,
-                        filename=pdf_filename,
-                    )
-                    response.pdf_path = pdf_path
-                except Exception as e:
-                    logger.error(f"流式模式生成 DeepSearch PDF 报告失败: {e}", exc_info=True)
-            
             yield self._create_event(
                 DeepSearchEventType.REPORT_GENERATED,
                 {
