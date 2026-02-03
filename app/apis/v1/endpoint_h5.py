@@ -480,6 +480,9 @@ async def tianyancha_baseinfo(
     if not keyword or not keyword.strip():
         raise HTTPException(status_code=400, detail="搜索关键字不能为空")
 
+    # 解码 URL 编码的参数，防止双重编码问题
+    keyword = unquote(keyword)
+
     if not settings.TIANYANCHA_API_TOKEN:
         raise HTTPException(status_code=500, detail="天眼查 API Token 未配置")
 
@@ -583,6 +586,9 @@ async def tianyancha_patents(
     if not keyword or not keyword.strip():
         raise HTTPException(status_code=400, detail="搜索关键字不能为空")
 
+    # 解码 URL 编码的参数，防止双重编码问题
+    keyword = unquote(keyword)
+
     if not settings.TIANYANCHA_API_TOKEN:
         raise HTTPException(status_code=500, detail="天眼查 API Token 未配置")
 
@@ -680,6 +686,12 @@ async def tianyancha_certificates(
     """
     if not name and not id:
         raise HTTPException(status_code=400, detail="公司名称或公司ID至少需要提供一个")
+
+    # 解码 URL 编码的参数，防止双重编码问题
+    if name:
+        name = unquote(name)
+    if certificateName:
+        certificateName = unquote(certificateName)
 
     if not settings.TIANYANCHA_API_TOKEN:
         raise HTTPException(status_code=500, detail="天眼查 API Token 未配置")
