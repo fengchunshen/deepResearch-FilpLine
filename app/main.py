@@ -20,6 +20,7 @@ from app.apis.v1 import (
     endpoint_deepsearch,
     endpoint_monitor,
     endpoint_h5,
+    endpoint_industry_chain,
 )
 import logging
 
@@ -119,6 +120,12 @@ app.include_router(
     endpoint_h5.router,
     prefix=f"{settings.API_V1_PREFIX}/h5",
     tags=["H5移动端"],
+)
+
+app.include_router(
+    endpoint_industry_chain.router,
+    prefix=f"{settings.API_V1_PREFIX}/industry-chain",
+    tags=["产业链"],
 )
 
 
