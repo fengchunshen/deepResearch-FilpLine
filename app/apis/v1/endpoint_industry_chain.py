@@ -50,29 +50,28 @@ def _sse_response(event_iter) -> StreamingResponse:
     )
 
 
-@router.post("/analyze/stream")
+@router.post(
+    "/analyze/stream",
+    summary="产业链分析",
+    description="根据用户描述搜索网络信息，生成产业链理解文本供用户确认。事件序列：started → searching → analyzing → completed。",
+)
 async def analyze_industry_chain_stream(request_data: IndustryChainAnalyzeRequest):
-    """
-    产业链分析流式接口（第一步）.
-
-    根据用户描述搜索网络信息，生成产业链理解文本供用户确认。
-
-    事件序列：started → searching → analyzing → completed
-    completed 事件 data 包含 understanding（理解文本）和 sources（来源列表）。
-    """
     logger.info("产业链分析请求: query=%r", request_data.query)
     return _sse_response(industry_chain_service.analyze_stream(request_data))
 
 
-@router.post("/generate/stream")
+@router.post(
+    "/generate/stream",
+    summary="产业链生成",
+    description=(
+        "支持两种模式：\n\n"
+        "**生成模式**（首次）：传入 query + understanding，生成多层级嵌套树形产业链结构。"
+        "事件序列：started → generating → completed。\n\n"
+        "**修改模式**（迭代）：额外传入 tree + feedback，根据用户修改意见搜索补充资料后调整现有产业链树。"
+        "事件序列：started → progress → keyword_generated → web_result → progress → completed。\n\n"
+        "completed 事件 data 包含 tree（产业链树形结构，含 industry_name / description / children）。"
+    ),
+)
 async def generate_industry_chain_stream(request_data: IndustryChainGenerateRequest):
-    """
-    产业链生成流式接口（第二步）.
-
-    基于用户确认后的产业链理解文本，生成多层级嵌套树形产业链结构。
-
-    事件序列：started → generating → completed
-    completed 事件 data 包含 tree（产业链树形结构）。
-    """
     logger.info("产业链生成请求: query=%r", request_data.query)
     return _sse_response(industry_chain_service.generate_stream(request_data))
