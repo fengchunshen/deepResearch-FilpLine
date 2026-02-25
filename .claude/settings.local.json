@@ -7,7 +7,8 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 新增 H5 移动端 API 模块\n\n- 政策解读流式接口\n- 政策申报指南流式接口\n- 产业链节点分析流式接口\n- 企业简单查询接口\n- 天眼查接口（搜索、基本信息、专利、资质证书）\nEOF\n\\)\")",
       "Bash(git commit:*)",
       "Bash(git push)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(echo not_found:*)"
     ]
   }
 }

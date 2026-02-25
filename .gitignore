@@ -56,3 +56,7 @@ Thumbs.db
 *.zip
 
 *.tar
+
+# 部署脚本（含敏感信息）
+deploy.sh
+deploy.ps1

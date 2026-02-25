@@ -1,5 +1,5 @@
 # 使用 Python 3.11 作为基础镜像
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -9,6 +9,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# 使用阿里云镜像源
+RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources
 
 # 安装系统依赖
 RUN apt-get update && \
@@ -24,7 +27,7 @@ RUN apt-get update && \
 COPY requirements.txt .
 
 # 安装 Python 依赖
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 
 # 复制应用代码
 COPY . .
