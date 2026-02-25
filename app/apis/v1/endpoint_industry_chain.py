@@ -18,18 +18,21 @@ router = APIRouter()
 
 async def _sse_wrapper(event_iter):
     """统一的 SSE 事件包装器。"""
+    seq = 0
     try:
         async for event in event_iter:
+            seq = max(seq, event.sequence_number)
             yield f"event: {event.event_type.value}\n"
             yield f"data: {event.model_dump_json()}\n\n"
     except Exception as e:
-        logger.error(f"产业链流式执行失败: {e}", exc_info=True)
+        logger.error("产业链流式执行失败: %s", e, exc_info=True)
+        seq += 1
         error_event = IndustryChainEvent(
             event_type=IndustryChainEventType.ERROR,
             timestamp=datetime.now().isoformat(),
-            sequence_number=9999,
-            data={"error": str(e)},
-            message=f"执行失败: {e}",
+            sequence_number=seq,
+            data={},
+            message="服务内部错误，请稍后重试",
         )
         yield f"event: {error_event.event_type.value}\n"
         yield f"data: {error_event.model_dump_json()}\n\n"
@@ -57,7 +60,7 @@ async def analyze_industry_chain_stream(request_data: IndustryChainAnalyzeReques
     事件序列：started → searching → analyzing → completed
     completed 事件 data 包含 understanding（理解文本）和 sources（来源列表）。
     """
-    logger.info(f"产业链分析请求: query={request_data.query!r}")
+    logger.info("产业链分析请求: query=%r", request_data.query)
     return _sse_response(industry_chain_service.analyze_stream(request_data))
 
 
@@ -71,5 +74,5 @@ async def generate_industry_chain_stream(request_data: IndustryChainGenerateRequ
     事件序列：started → generating → completed
     completed 事件 data 包含 tree（产业链树形结构）。
     """
-    logger.info(f"产业链生成请求: query={request_data.query!r}")
+    logger.info("产业链生成请求: query=%r", request_data.query)
     return _sse_response(industry_chain_service.generate_stream(request_data))

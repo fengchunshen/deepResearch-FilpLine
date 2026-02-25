@@ -103,8 +103,8 @@ REFINE_PROMPT = """你是一个产业链分析专家。用户对当前的"{query
 1. 仅根据用户意见做针对性修改，不要大幅重构未提及的部分
 2. 优先使用搜索资料中的真实信息（企业名、技术名、数据等），避免凭空编造
 3. 保持原有结构的合理部分不变
-3. 每个节点包含 name、description、type、children 字段
-4. 输出格式与原结构一致
+4. 每个节点包含 name、description、type、children 字段
+5. 输出格式与原结构一致
 
 请严格按以下 JSON 格式输出，不要包含其他内容：
 {{
@@ -154,16 +154,20 @@ class IndustryChainService:
             message=step_name,
         )
 
-    async def _search_one(self, keyword: str, count: int = 8) -> tuple[str, dict]:
-        """包装 bocha_web_search，返回 (keyword, result) 元组。"""
-        result = await bocha_web_search(keyword, count=count)
-        return (keyword, result)
+    async def _search_one(self, keyword: str, count: int = 8) -> tuple[str, dict, Exception | None]:
+        """包装 bocha_web_search，返回 (keyword, result, error) 元组，内部捕获异常避免丢失 keyword。"""
+        try:
+            result = await bocha_web_search(keyword, count=count)
+            return (keyword, result, None)
+        except Exception as e:
+            logger.warning("搜索关键词 %r 失败: %s", keyword, e)
+            return (keyword, {}, e)
 
     @staticmethod
     def _extract_json_object(text: str) -> str:
         """从 LLM 返回文本中健壮地提取 JSON 对象字符串。"""
         # 优先尝试 markdown 代码块
-        m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
+        m = re.search(r"```(?:json)?\s*(\{[\s\S]*\})\s*```", text)
         if m:
             return m.group(1)
         # 回退：用括号配对找最外层 {}
@@ -207,7 +211,7 @@ class IndustryChainService:
                     return [str(k) for k in keywords[:5]]
             return default_keywords
         except Exception as e:
-            logger.warning(f"关键词生成失败，使用默认关键词: {e}")
+            logger.warning("关键词生成失败，使用默认关键词: %s", e)
             return default_keywords
 
     async def analyze_stream(
@@ -253,15 +257,21 @@ class IndustryChainService:
             completed = 0
 
             for coro in asyncio.as_completed(tasks):
-                try:
-                    keyword, res = await coro
+                keyword, res, err = await coro
+                completed += 1
+                if err is not None:
+                    seq += 1
+                    yield self._make_event(
+                        IndustryChainEventType.WEB_RESULT, seq,
+                        data={"keyword": keyword, "result_count": 0},
+                        message=f"关键词「{keyword}」搜索失败",
+                    )
+                else:
                     webpages = res.get("webpages", [])
                     text = res.get("formatted_text", "")
                     all_webpages.extend(webpages)
                     if text and text != "未找到相关结果。":
                         all_formatted.append(text)
-                    completed += 1
-                    # WEB_RESULT 事件（携带搜索结果明细）
                     sources = [
                         {"title": p.get("name", ""), "url": p.get("url", ""), "siteName": p.get("siteName", "")}
                         for p in webpages if p.get("url")
@@ -271,15 +281,6 @@ class IndustryChainService:
                         IndustryChainEventType.WEB_RESULT, seq,
                         data={"keyword": keyword, "result_count": len(webpages), "sources": sources},
                         message=f"关键词「{keyword}」搜索到 {len(webpages)} 条结果",
-                    )
-                except Exception as e:
-                    completed += 1
-                    logger.warning(f"搜索任务异常: {e}")
-                    seq += 1
-                    yield self._make_event(
-                        IndustryChainEventType.WEB_RESULT, seq,
-                        data={"keyword": "unknown", "result_count": 0, "error": str(e)},
-                        message=f"搜索异常: {e}",
                     )
                 # 搜索进度 20% → 60%
                 pct = 20 + int(40 * completed / keyword_count)
@@ -348,12 +349,12 @@ class IndustryChainService:
             )
 
         except Exception as e:
-            logger.error(f"产业链分析失败: {e}", exc_info=True)
+            logger.error("产业链分析失败: %s", e, exc_info=True)
             seq += 1
             yield self._make_event(
                 IndustryChainEventType.ERROR, seq,
-                data={"error": str(e)},
-                message=f"产业链分析失败: {e}",
+                data={},
+                message="产业链分析失败，请稍后重试",
             )
 
     async def generate_stream(
@@ -399,7 +400,7 @@ class IndustryChainService:
                     else:
                         refine_keywords = [f"{query} {request.feedback}"]
                 except Exception as e:
-                    logger.warning(f"修改关键词生成失败: {e}")
+                    logger.warning("修改关键词生成失败: %s", e)
                     refine_keywords = [f"{query} {request.feedback}"]
 
                 seq += 1
@@ -419,13 +420,20 @@ class IndustryChainService:
                 completed = 0
 
                 for coro in asyncio.as_completed(tasks):
-                    try:
-                        keyword, res = await coro
+                    keyword, res, err = await coro
+                    completed += 1
+                    if err is not None:
+                        seq += 1
+                        yield self._make_event(
+                            IndustryChainEventType.WEB_RESULT, seq,
+                            data={"keyword": keyword, "result_count": 0},
+                            message=f"关键词「{keyword}」补充搜索失败",
+                        )
+                    else:
                         webpages = res.get("webpages", [])
                         text = res.get("formatted_text", "")
                         if text and text != "未找到相关结果。":
                             all_formatted.append(text)
-                        completed += 1
                         sources = [
                             {"title": p.get("name", ""), "url": p.get("url", ""), "siteName": p.get("siteName", "")}
                             for p in webpages if p.get("url")
@@ -436,9 +444,6 @@ class IndustryChainService:
                             data={"keyword": keyword, "result_count": len(webpages), "sources": sources},
                             message=f"关键词「{keyword}」搜索完成",
                         )
-                    except Exception as e:
-                        completed += 1
-                        logger.warning(f"补充搜索异常: {e}")
                     pct = 25 + int(25 * completed / kw_count)
                     seq += 1
                     yield self._make_progress_event(
@@ -479,9 +484,9 @@ class IndustryChainService:
                 except Exception as e:
                     last_error = e
                     if attempt < max_attempts:
-                        logger.warning(f"产业链 JSON 解析失败（第{attempt}次），重试: {e}")
+                        logger.warning("产业链 JSON 解析失败（第%d次），重试: %s", attempt, e)
                     else:
-                        logger.error(f"产业链 JSON 解析失败（已重试{max_attempts}次）: {e}")
+                        logger.error("产业链 JSON 解析失败（已重试%d次）: %s", max_attempts, e)
 
             if tree is None:
                 raise ValueError(f"LLM 多次未返回有效的产业链结构: {last_error}")
@@ -498,12 +503,12 @@ class IndustryChainService:
             )
 
         except Exception as e:
-            logger.error(f"产业链生成失败: {e}", exc_info=True)
+            logger.error("产业链生成失败: %s", e, exc_info=True)
             seq += 1
             yield self._make_event(
                 IndustryChainEventType.ERROR, seq,
-                data={"error": str(e)},
-                message=f"产业链生成失败: {e}",
+                data={},
+                message="产业链生成失败，请稍后重试",
             )
 
 
