@@ -123,6 +123,29 @@ REFINE_PROMPT = """你是一个产业链分析专家。用户对当前的"{query
 }}"""
 
 
+ENTERPRISE_EXTRACT_PROMPT = """你是一个产业链研究专家。根据以下搜索资料，提取与"{node_name}"节点相关的企业信息。
+
+产业链背景：{chain_definition}
+
+搜索资料：
+{search_context}
+
+要求：
+1. 提取与该产业链节点直接相关的企业，包括上下游供应商、制造商、服务商等
+2. 每个企业包含以下字段：
+   - name: 企业全称（必须使用工商注册的完整公司名称，如"宁德时代新能源科技股份有限公司"，不要使用简称如"宁德时代"）
+   - description: 一句话简介（主营业务）
+   - role: 在该产业链节点中的角色/定位
+3. 只提取搜索资料中明确提到的真实企业，不要编造。如果搜索资料中只有简称，请根据你的知识补全为工商注册全称
+4. 按相关性排序，最多返回 15 家企业
+5. 如果搜索资料中没有找到相关企业，返回空数组 []
+
+请严格按以下 JSON 数组格式输出，不要包含其他内容：
+[
+  {{"name": "企业名称", "description": "企业简介", "role": "产业链角色"}}
+]"""
+
+
 class IndustryChainService:
     """产业链生成服务（单例）。"""
 
@@ -183,6 +206,25 @@ class IndustryChainService:
                 if depth == 0:
                     return text[start:i + 1]
         raise ValueError("LLM 返回的 JSON 括号不匹配")
+
+    @staticmethod
+    def _extract_json_array(text: str) -> str:
+        """从 LLM 返回文本中提取 JSON 数组字符串。"""
+        m = re.search(r"```(?:json)?\s*(\[[\s\S]*\])\s*```", text)
+        if m:
+            return m.group(1)
+        start = text.find("[")
+        if start == -1:
+            raise ValueError("LLM 未返回有效的 JSON 数组")
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "[":
+                depth += 1
+            elif text[i] == "]":
+                depth -= 1
+                if depth == 0:
+                    return text[start:i + 1]
+        raise ValueError("LLM 返回的 JSON 数组括号不匹配")
 
     async def _generate_keywords(self, query: str) -> list[str]:
         """用 LLM 从用户描述生成搜索关键词。"""
@@ -510,6 +552,64 @@ class IndustryChainService:
                 data={},
                 message="产业链生成失败，请稍后重试",
             )
+
+
+    async def search_related_enterprises(
+        self, node_name: str, chain_definition: str,
+    ) -> list[dict]:
+        """根据产业链节点搜索关联企业列表。"""
+        # 1. 构造搜索关键词
+        queries = [
+            f"{node_name} 代表企业 龙头公司",
+            f"{node_name} {chain_definition[:50]} 相关企业 供应商",
+            f"{node_name} 行业企业 市场份额 竞争格局",
+        ]
+
+        # 2. 并行搜索
+        tasks = [asyncio.ensure_future(self._search_one(kw)) for kw in queries]
+        all_formatted = []
+        for coro in asyncio.as_completed(tasks):
+            keyword, res, err = await coro
+            if err is not None:
+                logger.warning("企业搜索关键词 %r 失败: %s", keyword, err)
+                continue
+            text = res.get("formatted_text", "")
+            if text and text != "未找到相关结果。":
+                all_formatted.append(text)
+
+        search_context = "\n\n".join(all_formatted) if all_formatted else "未找到相关搜索结果。"
+
+        # 3. LLM 提取企业信息
+        prompt = ENTERPRISE_EXTRACT_PROMPT.format(
+            node_name=node_name,
+            chain_definition=chain_definition,
+            search_context=search_context[:15000],
+        )
+
+        max_attempts = 2
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                result = await invoke_llm_with_fallback(
+                    invoke_func=lambda llm: llm.ainvoke(prompt),
+                    node_name="industry_chain_enterprises",
+                    gemini_model=settings.GEMINI_MODEL,
+                    temperature=0.3,
+                )
+                text = result.content if hasattr(result, "content") else str(result)
+                json_str = self._extract_json_array(text)
+                enterprises = json.loads(json_str)
+                if not isinstance(enterprises, list):
+                    raise ValueError("LLM 返回的不是数组")
+                return enterprises[:15]
+            except Exception as e:
+                last_error = e
+                if attempt < max_attempts:
+                    logger.warning("企业提取 JSON 解析失败（第%d次），重试: %s", attempt, e)
+                else:
+                    logger.error("企业提取 JSON 解析失败（已重试%d次）: %s", max_attempts, e)
+
+        raise ValueError(f"LLM 多次未返回有效的企业列表: {last_error}")
 
 
 industry_chain_service = IndustryChainService()

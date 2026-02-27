@@ -56,3 +56,24 @@ class IndustryChainTree(BaseModel):
     industry_name: str = Field(..., description="产业名称")
     description: str = Field(default="", description="产业概述")
     children: List[IndustryChainNode] = Field(default_factory=list, description="一级子节点列表")
+
+
+class EnterpriseSearchRequest(BaseModel):
+    """产业链节点关联企业搜索请求。"""
+    node_name: str = Field(..., description="产业链节点名称", min_length=1, max_length=200)
+    chain_definition: str = Field(..., description="产业链介绍", min_length=1, max_length=5000)
+
+
+class EnterpriseInfo(BaseModel):
+    """单个企业信息。"""
+    name: str = Field(..., description="企业名称")
+    description: str = Field(default="", description="企业简介")
+    role: str = Field(default="", description="在产业链中的角色/定位")
+
+
+class EnterpriseSearchResponse(BaseModel):
+    """产业链节点关联企业搜索响应。"""
+    success: bool = Field(..., description="是否成功")
+    node_name: str = Field(..., description="查询的节点名称")
+    enterprises: List[EnterpriseInfo] = Field(default_factory=list, description="关联企业列表")
+    message: str = Field(default="", description="响应消息")
